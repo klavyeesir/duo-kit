@@ -1,0 +1,9 @@
+{
+  "name": "duo-kit",
+  "image": "swift:latest",
+  "customizations": {
+    "vscode": {
+      "extensions": ["swiftlang.swift-vscode"]
+    }
+  }
+}
