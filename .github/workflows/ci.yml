@@ -7,12 +7,7 @@ jobs:
     container: swift:latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Build
         run: swift build
-
-      - name: Bad fixture must be flagged
-        run: .build/debug/DuoLint Fixtures/Bad.swift | grep -q "duo-screen-bounds"
-
-      - name: Clean fixture must produce no warnings
-        run: test -z "$(.build/debug/DuoLint Fixtures/Clean.swift)"
+      - name: Fixture tests
+        run: bash scripts/test-fixtures.sh
