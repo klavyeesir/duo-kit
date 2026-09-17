@@ -7,7 +7,21 @@ jobs:
     container: swift:latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Build
         run: swift build
+
       - name: Fixture tests
         run: bash scripts/test-fixtures.sh
+
+      - name: SARIF output is valid
+        run: |
+          apt-get update -qq && apt-get install -y -qq jq
+          .build/debug/DuoLint --format sarif Fixtures/bad > duolint.sarif || true
+          jq -e '.version == "2.1.0" and (.runs[0].results | length) == 3' duolint.sarif
+
+      - name: Upload SARIF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: duolint-sarif
+          path: duolint.sarif

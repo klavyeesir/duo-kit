@@ -18,4 +18,19 @@ for f in Fixtures/clean/*.swift; do
   echo "ok   clean/$(basename "$f")"
 done
 
+# Klasör tarama
+if "$BIN" Fixtures/bad > /dev/null; then
+  echo "FAIL: directory scan of Fixtures/bad exited 0"; exit 1
+fi
+"$BIN" Fixtures/clean > /dev/null || { echo "FAIL: directory scan of Fixtures/clean was flagged"; exit 1; }
+echo "ok   directory scan"
+
+# Olmayan yol: araç hatası (exit 2) vermeli
+set +e
+"$BIN" does-not-exist > /dev/null 2>&1
+code=$?
+set -e
+[ "$code" -eq 2 ] || { echo "FAIL: missing path returned $code, expected 2"; exit 1; }
+echo "ok   missing path -> exit 2"
+
 echo "All fixture tests passed"
