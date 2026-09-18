@@ -1,0 +1,4 @@
+{
+  "must_not_report": ["duo-screen-bounds", "duo-odd-grid-columns"],
+  "baseline_findings": 2
+}
