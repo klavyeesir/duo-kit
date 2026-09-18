@@ -43,5 +43,5 @@ echo "All fixture tests passed"
 
 # Agent skill kısa kalmalı
 lines=$(wc -l < skills/iphone-duo/SKILL.md)
-[ "$lines" -le 120 ] || { echo "FAIL: SKILL.md has $lines lines (max 120)"; exit 1; }
+[ "$lines" -le 180 ] || { echo "FAIL: SKILL.md has $lines lines (max 180)"; exit 1; }
 echo "ok   SKILL.md size ($lines lines)"

@@ -7,39 +7,93 @@ description: Adapt SwiftUI and UIKit code for iPhone Duo, Apple's folding iPhone
 
 ## Ground rules
 
-1. **Never invent an API.** The iOS 27.1 SDK is not yet public. If a task needs a Duo-specific symbol, say it is not yet verifiable and leave a `// TODO(duo):` marker. Do not guess spellings.
-2. **Never invent a number.** Point dimensions, scale factor, hinge angle thresholds and safe-area insets for Duo are not published. Ask the user or read them at runtime; do not hard-code a value you have not seen in Apple documentation.
-3. **Prefer removing assumptions over adding branches.** The goal is code that adapts to any size, not code with a special case for one device.
-4. **Run the linter when it is available.** If `duo-kit` is in the project, run `DuoLint <path>` and work through the findings before writing new code.
+1. **Never invent an API.** The iOS 27.1 SDK is not public yet. If a task needs a Duo-specific symbol, say it is not verifiable and leave a `// TODO(duo):` marker. Do not guess spellings.
+2. **Never invent a number.** Point dimensions, scale factor, hinge angle thresholds and safe-area insets for Duo are not published. Read them at runtime or ask; do not hard-code a value you have not seen in Apple documentation.
+3. **Prefer removing assumptions over adding branches.** Aim for code that adapts to any size, not code with a special case for one device.
+4. **Say what you did not verify.** No Duo simulator exists yet, so state that the result is unverified on device.
 
 ## Mental model
 
-The device has an outer display (used closed) and a larger inner display (used open), with a fold down the middle of the inner one. Size changes happen while the app is running — opening, closing and folding are resize events, not launches.
+An outer display used when closed, a larger inner display when open, and a fold down the middle of the inner one. Opening, closing and folding are **resize events while the app runs**, not launches.
 
-Treat the outer display as compact width and the inner display as regular width, and let layout follow the size class rather than the device identity.
+Per Apple's HIG article (see Sources): treat the outer display as **compact** width and the inner display as **regular** width. Branch on size class, never on device identity. Read the actual value at runtime (`@Environment(\.horizontalSizeClass)` / `traitCollection`) rather than assuming a device.
 
 ## What to flag and fix
 
 | Pattern | Problem | Fix |
 | --- | --- | --- |
-| `UIScreen.main.bounds`, cached screen sizes | Wrong after any fold/unfold | `GeometryReader`, size classes, auto layout |
-| Device or idiom checks (`userInterfaceIdiom`, model strings) | Duo is not in the list | Branch on size class, not device |
-| Odd grid column counts (3, 5, 7) | Middle column sits on the fold | Even column count |
-| Fixed frames and hard-coded insets | Do not survive a resize | Relative sizing, safe area insets |
+| `UIScreen.main.bounds`, cached sizes | Wrong after any fold/unfold | `GeometryReader`, size classes, auto layout |
+| Device or idiom checks | Duo is not in the list | Branch on size class |
+| Interactive content centred on the fold | Sits across the hinge | Put the gap there, not a control |
+| Fixed frames, hard-coded insets | Do not survive a resize | Relative sizing, safe area insets |
 | `UIRequiresFullScreen`, orientation locks | Opts out of resizing | Remove |
-| Blanket `.ignoresSafeArea()` | Content under reserved regions | Scope it to the edges you mean |
-| Hand-built tab bars and toolbars | Do not adapt to side placement | Native `TabView`, `.toolbar`, `NavigationSplitView` |
+| Blanket `.ignoresSafeArea()` | Content under reserved regions | Scope it to specific edges |
+| Hand-built tab bars and toolbars | Do not adapt to side placement | `TabView`, `.toolbar`, `NavigationSplitView` |
 
-When content must move because the fold is in the way, shift existing elements out of the fold region rather than redesigning a separate layout for that pose. Scrolling content (feeds, lists, documents) is exempt — it is expected to cross the fold.
+When the fold is in the way, shift existing elements out of that region rather than designing a separate layout per pose. Scrolling content (feeds, lists, documents) is expected to cross the fold and needs no special handling.
+
+### About grid columns
+
+The goal is that no interactive element or focal point is centred on the fold. An even column count is the simplest reliable way to get there, because the gutter lands in the middle. An adaptive layout that places a gutter over the fold is equally valid. Do not replace a deliberate design with a mechanical "make it even" edit — explain the trade-off and let the user choose.
+
+## Examples
+
+**Screen bounds → geometry**
+
+```swift
+// Before: read once, wrong after the device is opened
+Image(photo).frame(width: UIScreen.main.bounds.width / 3)
+
+// After: follows the container at any size
+GeometryReader { geo in
+    Image(photo).frame(width: geo.size.width / 3)
+}
+```
+
+**Device branch → size class**
+
+```swift
+// Before
+if UIDevice.current.userInterfaceIdiom == .phone { compactLayout() } else { wideLayout() }
+
+// After
+@Environment(\.horizontalSizeClass) private var sizeClass
+var body: some View {
+    sizeClass == .regular ? AnyView(wideLayout()) : AnyView(compactLayout())
+}
+```
+
+**Odd columns → even columns**
+
+```swift
+// Before: with three columns the middle one sits over the fold
+let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
+
+// After: the gutter lands on the fold instead
+let columns = [GridItem(.flexible()), GridItem(.flexible())]
+```
+
+## Optional tool
+
+If the project uses **duo-kit** (https://github.com/klavyeesir/duo-kit), run its linter first and work through the findings:
+
+```bash
+swift build -c release && .build/release/DuoLint <path>
+```
+
+Exit codes: 0 clean, 1 findings, 2 tool error. If duo-kit is not present in the project, skip this step — do not install it unasked and do not invent its output.
 
 ## Workflow for an audit request
 
-1. Run `DuoLint` on the target if available; otherwise read the layout code directly.
-2. Report findings grouped by the table above, each with file and line.
-3. Fix the ones that are certain (screen bounds, odd columns, fixed frames, full-screen opt-outs).
-4. For anything that needs an unshipped API, leave a `// TODO(duo):` marker and tell the user what is blocked and why.
-5. Say explicitly that nothing was verified on a Duo simulator, if that is the case.
+1. Run the linter if present; otherwise read the layout code directly.
+2. Report findings grouped by the table above, with file and line.
+3. Fix what is certain: screen bounds, device branches, fixed frames, full-screen opt-outs.
+4. For anything needing an unshipped API, leave `// TODO(duo):` and say what is blocked.
+5. State that nothing was verified on a Duo simulator.
 
-## Source
+## Sources
 
-Design guidance summarised from Apple's Human Interface Guidelines article "Designing for iPhone Duo" (published September 9, 2026) and the accompanying Tech Talks. Unofficial; not affiliated with Apple. Re-verify when Xcode 27.1 ships.
+- Apple HIG, *Designing for iPhone Duo*: https://developer.apple.com/design/human-interface-guidelines/designing-for-iphone-duo (published 2026-09-09)
+- Apple's iPhone Duo Tech Talks, linked from https://developer.apple.com/iphone-duo/
+
+Summarised in our own words; no Apple text is reproduced. Unofficial, not affiliated with Apple. Re-verify when Xcode 27.1 ships.
