@@ -33,4 +33,15 @@ set -e
 [ "$code" -eq 2 ] || { echo "FAIL: missing path returned $code, expected 2"; exit 1; }
 echo "ok   missing path -> exit 2"
 
+# GitHub annotation formatı
+"$BIN" --format github Fixtures/bad/duo-screen-bounds.swift > /tmp/out.txt || true
+grep -q "^::warning file=Fixtures/bad/duo-screen-bounds.swift,line=2," /tmp/out.txt \
+  || { echo "FAIL: github format output"; cat /tmp/out.txt; exit 1; }
+echo "ok   github annotation format"
+
 echo "All fixture tests passed"
+
+# Agent skill kısa kalmalı
+lines=$(wc -l < skills/iphone-duo/SKILL.md)
+[ "$lines" -le 120 ] || { echo "FAIL: SKILL.md has $lines lines (max 120)"; exit 1; }
+echo "ok   SKILL.md size ($lines lines)"

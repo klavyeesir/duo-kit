@@ -1,0 +1,83 @@
+cat > action.yml << 'EOF'
+name: DuoLint
+description: Lint SwiftUI/UIKit code for iPhone Duo adaptation issues (unofficial, not affiliated with Apple)
+author: klavyeesir
+branding:
+  icon: book-open
+  color: blue
+
+inputs:
+  path:
+    description: File or directory to scan
+    default: "."
+  format:
+    description: "github (inline annotations), text or sarif"
+    default: github
+  sarif-file:
+    description: Output file when format is sarif
+    default: duolint.sarif
+  fail-on-findings:
+    description: Fail the step when findings exist ("true" or "false")
+    default: "true"
+
+outputs:
+  exit-code:
+    description: "0 = clean, 1 = findings"
+    value: ${{ steps.lint.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check Swift toolchain
+      shell: bash
+      run: |
+        command -v swift >/dev/null || {
+          echo "::error title=DuoLint::Swift toolchain not found. Use a macOS runner or the swift container image."
+          exit 2
+        }
+
+    - name: Compute cache key
+      id: key
+      shell: bash
+      run: |
+        if command -v sha256sum >/dev/null; then HASH="sha256sum"; else HASH="shasum -a 256"; fi
+        KEY=$(cat "$GITHUB_ACTION_PATH/Package.resolved" "$GITHUB_ACTION_PATH"/Sources/DuoLint/*.swift | $HASH | cut -c1-16)
+        echo "value=duolint-${RUNNER_OS}-${RUNNER_ARCH}-${KEY}" >> "$GITHUB_OUTPUT"
+
+    - name: Cache DuoLint build
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.action_path }}/.build
+        key: ${{ steps.key.outputs.value }}
+
+    - name: Build DuoLint
+      shell: bash
+      run: swift build -c release --package-path "$GITHUB_ACTION_PATH"
+
+    - name: Run DuoLint
+      id: lint
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_SARIF_FILE: ${{ inputs.sarif-file }}
+        INPUT_FAIL: ${{ inputs.fail-on-findings }}
+      run: |
+        BIN="$GITHUB_ACTION_PATH/.build/release/DuoLint"
+        set +e
+        if [ "$INPUT_FORMAT" = "sarif" ]; then
+          "$BIN" --format sarif "$INPUT_PATH" > "$INPUT_SARIF_FILE"
+        else
+          "$BIN" --format "$INPUT_FORMAT" "$INPUT_PATH"
+        fi
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        if [ "$code" -eq 2 ]; then
+          echo "::error title=DuoLint::DuoLint could not run (see log above)"
+          exit 2
+        fi
+        if [ "$code" -eq 1 ] && [ "$INPUT_FAIL" = "true" ]; then
+          exit 1
+        fi
+EOF

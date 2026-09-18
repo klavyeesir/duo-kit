@@ -25,3 +25,36 @@ jobs:
         with:
           name: duolint-sarif
           path: duolint.sarif
+
+  action-test:
+    runs-on: ubuntu-latest
+    container: swift:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clean code passes
+        uses: ./
+        with:
+          path: Fixtures/clean
+
+      - name: Bad code with fail-on-findings=false does not fail
+        id: soft
+        uses: ./
+        with:
+          path: Fixtures/bad
+          format: text
+          fail-on-findings: "false"
+
+      - name: Bad code fails the step
+        id: strict
+        continue-on-error: true
+        uses: ./
+        with:
+          path: Fixtures/bad
+          format: text
+
+      - name: Verify outcomes
+        run: |
+          test "${{ steps.soft.outputs.exit-code }}" = "1"
+          test "${{ steps.strict.outcome }}" = "failure"
+          echo "Action behaves correctly"

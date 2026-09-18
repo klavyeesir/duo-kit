@@ -176,8 +176,8 @@ var arguments = Array(CommandLine.arguments.dropFirst())
 while !arguments.isEmpty {
     let argument = arguments.removeFirst()
     if argument == "--format" {
-        guard let value = arguments.first, ["text", "sarif"].contains(value) else {
-            fail("--format expects 'text' or 'sarif'")
+        guard let value = arguments.first, ["text", "sarif", "github"].contains(value) else {
+            fail("--format expects 'text', 'sarif' or 'github'")
         }
         format = value
         arguments.removeFirst()
@@ -187,7 +187,7 @@ while !arguments.isEmpty {
 }
 
 if inputs.isEmpty {
-    fail("usage: DuoLint [--format text|sarif] <file-or-directory>...")
+    fail("usage: DuoLint [--format text|sarif|github] <file-or-directory>...")
 }
 
 var allFindings: [Finding] = []
@@ -208,6 +208,22 @@ for file in inputs.flatMap(swiftFiles) {
 }
 
 switch format {
+
+    case "github":
+    // GitHub workflow command formatı; özel karakterler kaçırılmalı (escape)
+    func esc(_ s: String) -> String {
+        s.replacingOccurrences(of: "%", with: "%25")
+         .replacingOccurrences(of: "\r", with: "%0D")
+         .replacingOccurrences(of: "\n", with: "%0A")
+    }
+    func escProperty(_ s: String) -> String {
+        esc(s).replacingOccurrences(of: ":", with: "%3A")
+              .replacingOccurrences(of: ",", with: "%2C")
+    }
+    for f in allFindings {
+        print("::warning file=\(escProperty(f.file)),line=\(f.line),col=\(f.column),title=\(escProperty(f.rule))::\(esc(f.message))")
+    }
+    
 case "sarif":
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
