@@ -1,14 +1,14 @@
 # duo-kit
 
-**Linter, GitHub Action and AI agent skill for adapting SwiftUI/UIKit apps to iPhone Duo.**
+**A linter, GitHub Action and agent skill for adapting iOS apps to iPhone Duo.**
 
-DuoLint parses your Swift code with [SwiftSyntax](https://github.com/swiftlang/swift-syntax) — not regex — and reports layout patterns that break on iPhone Duo's two displays, its fold and its runtime size changes.
+DuoLint parses Swift with [SwiftSyntax](https://github.com/swiftlang/swift-syntax) — a real parser, not regex — and reports layout patterns that break on iPhone Duo's two displays, its fold, and its runtime size changes.
 
-> **Status: pre-release (v0.1.x).** Apple has not shipped Xcode 27.1 / the iOS 27.1 SDK yet. Every rule here is based on published design guidance and compiles on current toolchains, but nothing has been verified against a shipping Duo SDK or simulator. See [Roadmap](#roadmap).
+> **Pre-release (v0.1.x).** Xcode 27.1 and the iOS 27.1 SDK are not out yet. Every rule here targets layout patterns that hold regardless of SDK, and the project compiles on current toolchains — but nothing has been verified on a Duo simulator. See [Roadmap](#roadmap).
 
-## Why
+## Why this exists
 
-A foldable changes display size at runtime, and a hinge runs down the middle of the inner display. Code that assumes one fixed screen — cached screen bounds, odd column counts centred on the fold — produces visible layout bugs on the new device. Existing tools do not check for this, and AI coding agents have no training data for a phone announced in September 2026.
+A foldable changes display size while the app is running, and a hinge runs down the middle of the inner display. Code that assumes one fixed screen produces visible bugs on the new device. Existing Swift linters do not check for this, and coding agents have no training data for a phone announced in September 2026.
 
 ## Quick start
 
@@ -19,14 +19,13 @@ swift build -c release
 .build/release/DuoLint path/to/your/ios/project
 ```
 
-Example output:
 Sources/GalleryView.swift:14:21: warning: [duo-screen-bounds] Use GeometryReader / size classes instead of UIScreen.main.bounds
-Sources/GalleryView.swift:22:9: warning: [duo-odd-grid-columns] 3 grid columns: the middle column lands on the iPhone Duo fold. Use an even column count.
+Sources/ReaderView.swift:31:9: warning: [duo-manual-toolbar] Hand-built toolbar (3 buttons separated by Spacer): use .toolbar so bars adapt to side placement and the fold on iPhone Duo.
 
 
-Exit codes: `0` clean, `1` findings, `2` tool error (unreadable path, bad arguments).
+Exit codes: `0` clean, `1` findings, `2` tool error. Output formats: `--format text` (default), `github` (inline PR annotations), `sarif`.
 
-## Use as a GitHub Action
+## GitHub Action
 
 ```yaml
 - uses: klavyeesir/duo-kit@v0.1.0
@@ -34,9 +33,10 @@ Exit codes: `0` clean, `1` findings, `2` tool error (unreadable path, bad argume
     path: Sources
 ```
 
-Findings appear as inline annotations on the pull request. Inputs: `path`, `format` (`github` | `text` | `sarif`), `sarif-file`, `fail-on-findings`.
+Findings appear as annotations on the changed lines of a pull request. Inputs: `path`, `format`, `sarif-file`, `fail-on-findings`.
 
-For SARIF and GitHub code scanning:
+<details>
+<summary>SARIF and code scanning</summary>
 
 ```yaml
 permissions:
@@ -51,31 +51,44 @@ steps:
     with:
       sarif_file: duolint.sarif
 ```
+</details>
 
-Runs on any runner with a Swift toolchain (macOS runners, or `container: swift:latest` on Linux).
-
-For supply-chain safety, pin to a commit SHA rather than a tag: `uses: klavyeesir/duo-kit@<sha>`.
+Runs on any runner with a Swift toolchain (macOS runners, or `container: swift:latest` on Linux). Pin to a commit SHA rather than a tag for supply-chain safety.
 
 ## Rules
 
-| ID | What it flags | Why it matters on Duo |
+| ID | Flags | Why it matters on Duo |
 | --- | --- | --- |
-| `duo-screen-bounds` | `UIScreen.main.bounds` | The display size changes when the device is opened, closed or folded, so a value read once is wrong afterwards. Read size from the view (`GeometryReader`, size classes) instead. |
-| `duo-odd-grid-columns` | Odd `GridItem` column counts (3, 5, 7…) in array literals and `Array(repeating:count:)` | With an odd count the middle column sits over the fold on the inner display. An even count puts the gap there instead. |
+| `duo-screen-bounds` | `UIScreen.main.bounds` | Display size changes when the device is opened, closed or folded, so a value read once is wrong afterwards. |
+| `duo-odd-grid-columns` | Odd `GridItem` column counts in literals and `Array(repeating:count:)` | With an odd count the middle column sits over the fold; an even count puts the gutter there instead. |
+| `duo-ignores-safe-area` | `.ignoresSafeArea()` with no arguments | Unscoped, it also ignores the reserved regions around the camera and the fold. |
+| `duo-manual-toolbar` | `HStack` of buttons separated by `Spacer()` | Hand-built bars do not follow the system when bars move to the side of the display. |
+
+Each rule has a fixture that must be caught and a look-alike correct file that must not be, both enforced in CI.
 
 ### Known limitations
 
-- Column counts are only detected when written as a literal. `let n = 3; Array(repeating: …, count: n)` is not resolved.
-- No cross-file or type inference; each file is parsed on its own.
-- Rules cover layout patterns that are stable regardless of SDK. Rules for the new iOS 27.1 APIs are deliberately absent until those symbols can be compiled.
+- Column counts are only detected as literals; `count: n` with a variable is not resolved.
+- Each file is parsed independently — no cross-file or type inference.
+- No rules for the new iOS 27.1 APIs. Their spellings cannot be compiled yet, so guessing them would produce exactly the kind of error this project exists to prevent.
 
-## AI agent skill
+## Agent skill
 
-`skills/iphone-duo/SKILL.md` teaches coding agents (Claude Code, Antigravity, Cursor, Codex) the same rules, plus the ground rule that matters most right now: **never invent an iOS 27.1 API name or an undocumented dimension — say it is unknown instead.**
+`skills/iphone-duo/SKILL.md` teaches coding agents (Claude Code, Antigravity, Cursor, Codex) the same rules, plus before/after examples and the ground rule that matters most right now: **never invent an iOS 27.1 API name or an undocumented dimension — say it is unknown instead.**
 
 ```bash
 cp -r skills/iphone-duo ~/.claude/skills/
 ```
+
+### Does the skill actually help?
+
+We measure instead of claiming. `benchmarks/` holds the tasks, the raw agent outputs and the scoring script.
+
+| Task | Without skill | With skill |
+| --- | --- | --- |
+| photo-grid (cached bounds, odd columns) | 3/3 | 3/3 |
+
+So far: **no measurable difference on this task.** Both patterns in it are things a current model already fixes when asked to make a layout adaptive, so the task does not isolate Duo-specific knowledge. Harder tasks are in progress. Results will be published as they come out, including the ones that show no effect.
 
 ## Development
 
@@ -84,14 +97,14 @@ swift build
 ./scripts/test-fixtures.sh
 ```
 
-Every rule has a fixture named after it in `Fixtures/bad/`, plus a look-alike correct file in `Fixtures/clean/` that must produce no findings. CI runs the fixture suite, validates the SARIF output and tests the Action itself against both fixture sets.
+To add a rule: subclass `Rule` in `Sources/DuoLint/main.swift`, register it in `ruleCatalog` and the rule list, then add `Fixtures/bad/<rule-id>.swift` and a clean counterpart. CI needs no changes.
 
-To add a rule: subclass `Rule` in `Sources/DuoLint/main.swift`, add it to `ruleCatalog` and to the rule list in the main loop, then add the two fixtures. No CI changes needed.
+CI runs the fixture suite, validates the SARIF output, and tests the Action itself against both fixture sets.
 
 ## Roadmap
 
-- [ ] Verify every rule against Xcode 27.1 and the iPhone Duo simulator on the day the SDK ships
-- [ ] Benchmark: measure agent output with and without the skill, publish the numbers
+- [ ] Verify every rule against Xcode 27.1 and the Duo simulator the day the SDK ships
+- [ ] Benchmark tasks that isolate Duo-specific knowledge
 - [ ] Before/after example app
 - [ ] Xcode build plugin
 
