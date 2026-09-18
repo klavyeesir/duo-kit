@@ -11,7 +11,7 @@ flags the rules listed in the task's `expect.json`.
 
 | Task | Model | Without skill | With skill |
 | --- | --- | --- | --- |
-| photo-grid | (fill in) | 3/3 | 3/3 |
+| photo-grid | Fable 5.1 | 3/3 | 3/3 |
 
 **Reading of the photo-grid result:** no measurable difference. Both rules in this
 task (cached screen bounds, odd grid columns) describe patterns a current model
