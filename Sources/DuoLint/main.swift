@@ -24,6 +24,12 @@ let ruleCatalog: [RuleInfo] = [
              summary: "Avoid UIScreen.main.bounds; iPhone Duo changes display size at runtime."),
     RuleInfo(id: "duo-odd-grid-columns",
              summary: "Avoid odd grid column counts; the middle column lands on the iPhone Duo fold."),
+
+        RuleInfo(id: "duo-ignores-safe-area",
+             summary: "Unscoped ignoresSafeArea() puts content under reserved regions on iPhone Duo."),
+    RuleInfo(id: "duo-manual-toolbar",
+             summary: "Hand-built toolbars do not adapt to side placement on iPhone Duo."),
+
 ]
 
 // MARK: - Rules
@@ -84,6 +90,44 @@ final class OddGridColumnsRule: Rule {
            let countExpr = args["count"]?.as(IntegerLiteralExprSyntax.self),
            let count = Int(countExpr.literal.text) {
             reportIfOdd(node, count: count)
+        }
+        return .visitChildren
+    }
+}
+
+// Kural 3: parametresiz .ignoresSafeArea()
+final class IgnoresSafeAreaRule: Rule {
+    override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
+        if let member = node.calledExpression.as(MemberAccessExprSyntax.self),
+           member.declName.baseName.text == "ignoresSafeArea",
+           node.arguments.isEmpty {
+            report(node, rule: "duo-ignores-safe-area",
+                   message: "Unscoped ignoresSafeArea(): on iPhone Duo this can put content under reserved regions. Scope it with edges:/regions:.")
+        }
+        return .visitChildren
+    }
+}
+
+// Kural 4: elle yapılmış toolbar (Spacer ile ayrılmış butonlardan oluşan HStack)
+final class ManualToolbarRule: Rule {
+    override func visit(_ node: FunctionCallExprSyntax) -> SyntaxVisitorContinueKind {
+        guard node.calledExpression.trimmedDescription == "HStack",
+              let body = node.trailingClosure?.statements else { return .visitChildren }
+
+        var buttons = 0
+        var spacers = 0
+        for statement in body {
+            guard let call = statement.item.as(FunctionCallExprSyntax.self) else { continue }
+            switch call.calledExpression.trimmedDescription {
+            case "Button": buttons += 1
+            case "Spacer": spacers += 1
+            default: break
+            }
+        }
+
+        if buttons >= 2 && spacers >= 1 {
+            report(node, rule: "duo-manual-toolbar",
+                   message: "Hand-built toolbar (\(buttons) buttons separated by Spacer): use .toolbar so bars adapt to side placement and the fold on iPhone Duo.")
         }
         return .visitChildren
     }
@@ -200,6 +244,8 @@ for file in inputs.flatMap(swiftFiles) {
     let rules: [Rule] = [
         ScreenBoundsRule(file: file, tree: tree),
         OddGridColumnsRule(file: file, tree: tree),
+        IgnoresSafeAreaRule(file: file, tree: tree),
+        ManualToolbarRule(file: file, tree: tree),
     ]
     for rule in rules {
         rule.walk(tree)

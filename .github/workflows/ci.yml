@@ -18,7 +18,7 @@ jobs:
         run: |
           apt-get update -qq && apt-get install -y -qq jq
           .build/debug/DuoLint --format sarif Fixtures/bad > duolint.sarif || true
-          jq -e '.version == "2.1.0" and (.runs[0].results | length) == 3' duolint.sarif
+          jq -e '.version == "2.1.0" and (.runs[0].results | length) == 5' duolint.sarif
 
       - name: Upload SARIF artifact
         uses: actions/upload-artifact@v4

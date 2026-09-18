@@ -1,0 +1,4 @@
+{
+  "must_not_report": ["duo-ignores-safe-area", "duo-manual-toolbar"],
+  "baseline_findings": 2
+}
