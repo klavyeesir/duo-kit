@@ -4,7 +4,7 @@
 
 DuoLint parses Swift with [SwiftSyntax](https://github.com/swiftlang/swift-syntax) — a real parser, not regex — and reports layout patterns that break on iPhone Duo's two displays, its fold, and its runtime size changes.
 
-> **Pre-release (v0.1.x).** Xcode 27.1 and the iOS 27.1 SDK are not out yet. Every rule here targets layout patterns that hold regardless of SDK, and the project compiles on current toolchains — but nothing has been verified on a Duo simulator. See [Roadmap](#roadmap).
+> **Pre-release (v0.1.x).** Xcode 27 and iOS 27.0 shipped on 2026-09-14, but the Duo APIs live in the iOS 27.1 SDK, and **Xcode 27.1 is still beta** (27A9269). Every lint rule here targets layout patterns that hold regardless of SDK. The rules have not yet been run against the iPhone Duo Simulator runtime that ships in the 27.1 beta. See [Roadmap](#roadmap).
 
 ## Why this exists
 
@@ -70,11 +70,13 @@ Each rule has a fixture that must be caught and a look-alike correct file that m
 
 - Column counts are only detected as literals; `count: n` with a variable is not resolved.
 - Each file is parsed independently — no cross-file or type inference.
-- No rules for the new iOS 27.1 APIs. Their spellings cannot be compiled yet, so guessing them would produce exactly the kind of error this project exists to prevent.
+- No rules for the new iOS 27.1 APIs (`ArrangementView`, `ReservedRegion`, toolbar axis and overflow control). They are documented now, but still marked Beta and not yet compilable against a GA SDK. The agent skill covers them; the linter does not.
 
 ## Agent skill
 
-`skills/iphone-duo/SKILL.md` teaches coding agents (Claude Code, Antigravity, Cursor, Codex) the same rules, plus before/after examples and the ground rule that matters most right now: **never invent an iOS 27.1 API name or an undocumented dimension — say it is unknown instead.**
+`skills/iphone-duo/SKILL.md` teaches coding agents (Claude Code, Antigravity, Cursor, Codex) the same rules, plus the iOS 27.1 API surface transcribed from Apple's documentation — reserved regions, arrangement views, and vertical bar placement and overflow — with before/after examples.
+
+Every API name in the skill was read from developer.apple.com on 2026-09-21 rather than recalled, each is marked as beta, and the ground rule that matters most is still there: **use only the symbols written in the file; never invent an API name or an undocumented dimension — say it is unknown instead.**
 
 ```bash
 cp -r skills/iphone-duo ~/.claude/skills/
@@ -103,7 +105,9 @@ CI runs the fixture suite, validates the SARIF output, and tests the Action itse
 
 ## Roadmap
 
-- [ ] Verify every rule against Xcode 27.1 and the Duo simulator the day the SDK ships
+- [ ] Verify every rule against the iPhone Duo Simulator runtime in the Xcode 27.1 beta
+- [ ] Re-verify every API name in the skill when Xcode 27.1 reaches GA
+- [ ] Lint rules for the 27.1 APIs: toolbar items missing an icon, `#available` gates around Duo symbols, `ArrangementView` nested in a scroll or split container
 - [ ] Benchmark tasks that isolate Duo-specific knowledge
 - [ ] Before/after example app
 - [ ] Xcode build plugin
