@@ -1,0 +1,5 @@
+# Shell scripts and the Docker entrypoint must keep LF endings: CRLF breaks the
+# shebang inside the container and makes the scripts unrunnable on Linux CI.
+*.sh text eol=lf
+Dockerfile text eol=lf
+entrypoint.sh text eol=lf

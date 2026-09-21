@@ -28,7 +28,7 @@ Exit codes: `0` clean, `1` findings, `2` tool error. Output formats: `--format t
 ## GitHub Action
 
 ```yaml
-- uses: klavyeesir/duo-kit@v0.1.0
+- uses: klavyeesir/duo-kit@v0.2.0
   with:
     path: Sources
 ```
@@ -43,7 +43,7 @@ permissions:
   security-events: write
 steps:
   - uses: actions/checkout@v4
-  - uses: klavyeesir/duo-kit@v0.1.0
+  - uses: klavyeesir/duo-kit@v0.2.0
     with:
       format: sarif
       fail-on-findings: "false"
@@ -53,7 +53,7 @@ steps:
 ```
 </details>
 
-Runs on any runner with a Swift toolchain (macOS runners, or `container: swift:latest` on Linux). Pin to a commit SHA rather than a tag for supply-chain safety.
+This is a Docker action, so it runs on any Linux runner — `ubuntu-latest` is enough and no Swift toolchain is needed on the runner. The first run in a job builds the image, which takes a few minutes; subsequent steps in the same job reuse it. Pin to a commit SHA rather than a tag for supply-chain safety.
 
 ## Rules
 

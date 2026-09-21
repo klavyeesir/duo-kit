@@ -26,9 +26,10 @@ jobs:
           name: duolint-sarif
           path: duolint.sarif
 
+  # Deliberately runs on a bare runner with no Swift toolchain: the action is a
+  # Docker action and must bring its own. This is the scenario consumers hit.
   action-test:
     runs-on: ubuntu-latest
-    container: swift:latest
     steps:
       - uses: actions/checkout@v4
 
