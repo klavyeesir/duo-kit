@@ -1,6 +1,11 @@
 name: CI
 on: [push, pull_request]
 
+# Least privilege: both jobs only read the repository. Artifact upload uses the
+# Actions runtime token, not GITHUB_TOKEN, so it needs nothing beyond this.
+permissions:
+  contents: read
+
 jobs:
   lint-tests:
     runs-on: ubuntu-latest
