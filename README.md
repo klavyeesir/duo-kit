@@ -4,7 +4,7 @@
 
 DuoLint parses Swift with [SwiftSyntax](https://github.com/swiftlang/swift-syntax) — a real parser, not regex — and reports layout patterns that break on iPhone Duo's two displays, its fold, and its runtime size changes.
 
-> **Pre-release (v0.1.x).** Xcode 27 and iOS 27.0 shipped on 2026-09-14, but the Duo APIs live in the iOS 27.1 SDK, and **Xcode 27.1 is still beta** (27A9269). Every lint rule here targets layout patterns that hold regardless of SDK. The rules have not yet been run against the iPhone Duo Simulator runtime that ships in the 27.1 beta. See [Roadmap](#roadmap).
+> **Pre-release (v0.3.x).** Xcode 27 and iOS 27.0 shipped on 2026-09-14, but the Duo APIs live in the iOS 27.1 SDK, and **Xcode 27.1 is still beta** (27A9269). Every lint rule here targets layout patterns that hold regardless of SDK. The rules have not yet been run against the iPhone Duo Simulator runtime that ships in the 27.1 beta. See [Roadmap](#roadmap).
 
 ## Why this exists
 
@@ -28,7 +28,7 @@ Exit codes: `0` clean, `1` findings, `2` tool error. Output formats: `--format t
 ## GitHub Action
 
 ```yaml
-- uses: klavyeesir/duo-kit@v0.2.0
+- uses: klavyeesir/duo-kit@v0.3.0
   with:
     path: Sources
 ```
@@ -43,7 +43,7 @@ permissions:
   security-events: write
 steps:
   - uses: actions/checkout@v4
-  - uses: klavyeesir/duo-kit@v0.2.0
+  - uses: klavyeesir/duo-kit@v0.3.0
     with:
       format: sarif
       fail-on-findings: "false"
@@ -53,7 +53,11 @@ steps:
 ```
 </details>
 
-This is a Docker action, so it runs on any Linux runner — `ubuntu-latest` is enough and no Swift toolchain is needed on the runner. The first run in a job builds the image, which takes a few minutes; subsequent steps in the same job reuse it. `@v0` is a moving tag that follows the latest v0.x release if you want patches automatically; `@v0.2.0` pins one release. For supply-chain safety, pin to a commit SHA rather than to either.
+This is a Docker action that pulls a prebuilt image from GHCR, so `ubuntu-latest` is enough: no Swift toolchain on the runner, and no compile step in your workflow. The image is built once per release, not on your CI time.
+
+It is published for `linux/amd64`, which covers the GitHub-hosted Linux runners. ARM runners are not supported yet.
+
+`@v0` is a moving tag that follows the latest v0.x release if you want patches automatically; `@v0.3.0` pins one release. For supply-chain safety, pin to a commit SHA rather than to either.
 
 ## Rules
 
@@ -103,13 +107,14 @@ swift build
 
 To add a rule: subclass `Rule` in `Sources/DuoLint/main.swift`, register it in `ruleCatalog` and the rule list, then add `Fixtures/bad/<rule-id>.swift` and a clean counterpart. CI needs no changes.
 
-CI runs the fixture suite, validates the SARIF output, and tests the Action itself against both fixture sets.
+CI runs the fixture suite, validates the SARIF output, and builds the action container from source to test it against both fixture sets on a runner with no Swift toolchain.
 
 ## Roadmap
 
 - [ ] Verify every rule against the iPhone Duo Simulator runtime in the Xcode 27.1 beta
 - [ ] Re-verify every API name in the skill when Xcode 27.1 reaches GA
 - [ ] Lint rules for the 27.1 APIs: toolbar items missing an icon, `#available` gates around Duo symbols, `ArrangementView` nested in a scroll or split container
+- [ ] Publish the action image for `linux/arm64` alongside `amd64`
 - [ ] Benchmark tasks that isolate Duo-specific knowledge
 - [ ] Before/after example app
 - [ ] Xcode build plugin

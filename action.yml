@@ -25,7 +25,12 @@ outputs:
 
 runs:
   using: docker
-  image: Dockerfile
+  # Prebuilt image, pushed to GHCR by .github/workflows/release-image.yml when
+  # the matching tag is created. Building from the Dockerfile here instead would
+  # make every consumer run compile Swift, which takes minutes. Bump this tag in
+  # the same commit that precedes a release tag; the release workflow refuses to
+  # publish if it does not match.
+  image: docker://ghcr.io/klavyeesir/duo-kit:v0.3.0
   # Inputs are passed positionally rather than read as INPUT_* environment
   # variables: GitHub uppercases input names but keeps dashes, so
   # fail-on-findings arrives as INPUT_FAIL-ON-FINDINGS, which a shell cannot

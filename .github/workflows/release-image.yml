@@ -1,0 +1,51 @@
+name: Release image
+
+# Builds the DuoLint container once per release and pushes it to GHCR, so the
+# action pulls a prebuilt image instead of compiling Swift on every consumer
+# run. action.yml must already reference the tag being pushed.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: echo "$TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+
+      - name: Build and push
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          docker build -t "$IMAGE:$VERSION" .
+          docker push "$IMAGE:$VERSION"
+
+      - name: Verify the pushed image runs
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          docker pull "$IMAGE:$VERSION"
+          docker run --rm -v "$PWD:/w" -w /w "$IMAGE:$VERSION" \
+            Fixtures/clean text duolint.sarif true
+
+      - name: Check action.yml points at this tag
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          grep -q "ghcr.io/${{ github.repository }}:$VERSION" action.yml || {
+            echo "::error title=DuoLint::action.yml does not reference $VERSION."
+            echo "Bump the image tag in action.yml before tagging a release."
+            exit 1
+          }
