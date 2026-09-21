@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Entrypoint for the DuoLint Docker action.
-# GitHub exposes each action input as INPUT_<NAME>, uppercased with dashes
-# replaced by underscores.
+#
+# Inputs arrive as positional arguments, in the order declared under runs.args
+# in action.yml. They are deliberately not read from INPUT_* environment
+# variables: GitHub uppercases input names but does not convert dashes, so
+# fail-on-findings would arrive as INPUT_FAIL-ON-FINDINGS, which a shell cannot
+# expand.
 set -uo pipefail
 
-SCAN_PATH="${INPUT_PATH:-.}"
-FORMAT="${INPUT_FORMAT:-github}"
-SARIF_FILE="${INPUT_SARIF_FILE:-duolint.sarif}"
-FAIL_ON_FINDINGS="${INPUT_FAIL_ON_FINDINGS:-true}"
+SCAN_PATH="${1:-.}"
+FORMAT="${2:-github}"
+SARIF_FILE="${3:-duolint.sarif}"
+FAIL_ON_FINDINGS="${4:-true}"
 
 if [ "$FORMAT" = "sarif" ]; then
   DuoLint --format sarif "$SCAN_PATH" > "$SARIF_FILE"

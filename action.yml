@@ -26,3 +26,12 @@ outputs:
 runs:
   using: docker
   image: Dockerfile
+  # Inputs are passed positionally rather than read as INPUT_* environment
+  # variables: GitHub uppercases input names but keeps dashes, so
+  # fail-on-findings arrives as INPUT_FAIL-ON-FINDINGS, which a shell cannot
+  # expand. Order here must match the positional reads in entrypoint.sh.
+  args:
+    - ${{ inputs.path }}
+    - ${{ inputs.format }}
+    - ${{ inputs.sarif-file }}
+    - ${{ inputs.fail-on-findings }}
