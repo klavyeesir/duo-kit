@@ -53,7 +53,7 @@ steps:
 ```
 </details>
 
-This is a Docker action, so it runs on any Linux runner — `ubuntu-latest` is enough and no Swift toolchain is needed on the runner. The first run in a job builds the image, which takes a few minutes; subsequent steps in the same job reuse it. Pin to a commit SHA rather than a tag for supply-chain safety.
+This is a Docker action, so it runs on any Linux runner — `ubuntu-latest` is enough and no Swift toolchain is needed on the runner. The first run in a job builds the image, which takes a few minutes; subsequent steps in the same job reuse it. `@v0` is a moving tag that follows the latest v0.x release if you want patches automatically; `@v0.2.0` pins one release. For supply-chain safety, pin to a commit SHA rather than to either.
 
 ## Rules
 
