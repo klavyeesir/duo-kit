@@ -76,7 +76,9 @@ Each rule has a fixture that must be caught and a look-alike correct file that m
 
 `skills/iphone-duo/SKILL.md` teaches coding agents (Claude Code, Antigravity, Cursor, Codex) the same rules, plus the iOS 27.1 API surface transcribed from Apple's documentation — reserved regions, arrangement views, and vertical bar placement and overflow — with before/after examples.
 
-Every API name in the skill was read from developer.apple.com on 2026-09-21 rather than recalled, each is marked as beta, and the ground rule that matters most is still there: **use only the symbols written in the file; never invent an API name or an undocumented dimension — say it is unknown instead.**
+The skill file itself stays short so it does not crowd an agent's context; the verified symbol list lives beside it in `skills/iphone-duo/references/duo-api.md`, which the skill tells the agent to open before writing any Duo API. Both sizes are capped in CI.
+
+Every API name was read from developer.apple.com on 2026-09-21 rather than recalled, each is marked as beta, and the ground rule that matters most is still there: **use only the symbols written in the reference; never invent an API name or an undocumented dimension — say it is unknown instead.**
 
 ```bash
 cp -r skills/iphone-duo ~/.claude/skills/

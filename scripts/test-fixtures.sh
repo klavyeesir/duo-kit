@@ -45,3 +45,8 @@ echo "All fixture tests passed"
 lines=$(wc -l < skills/iphone-duo/SKILL.md)
 [ "$lines" -le 180 ] || { echo "FAIL: SKILL.md has $lines lines (max 180)"; exit 1; }
 echo "ok   SKILL.md size ($lines lines)"
+
+# Referans dosyası da sınırsız büyümesin, yoksa bölme guardrail'i delmenin yolu olur
+ref=$(wc -l < skills/iphone-duo/references/duo-api.md)
+[ "$ref" -le 200 ] || { echo "FAIL: duo-api.md has $ref lines (max 200)"; exit 1; }
+echo "ok   duo-api.md size ($ref lines)"
